@@ -4,41 +4,37 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <windows.h>
-
 namespace Vortex {
 
-#ifdef _WIN32
-
-std::string Narrow(const wchar_t* s, int len) {
-    if (s == nullptr || len <= 0) return std::string();
-    auto new_size =
-        WideCharToMultiByte(CP_UTF8, 0, s, len, nullptr, 0, nullptr, nullptr);
-    std::string out(new_size, 0);
-    WideCharToMultiByte(CP_UTF8, 0, s, len, out.data(), out.size(), nullptr,
-                        nullptr);
-    return out;
-}
-
-std::wstring Widen(const char* s, int len) {
-    std::wstring out;
-    if (s == nullptr || len <= 0) return out;
-    auto new_size = MultiByteToWideChar(CP_UTF8, 0, s, len, nullptr, 0);
-    std::wstring out_str(new_size, 0);
-    MultiByteToWideChar(CP_UTF8, 0, s, len, &out_str[0], new_size);
-    out.assign(out_str.data(), out_str.data() + out_str.size());
-    return out;
-}
-
-#else  // macOS/Linux: wchar_t is UTF-32
+// Portable UTF-8 <-> wchar_t conversion.
+// wchar_t is 4 bytes (UTF-32) on macOS/Linux, 2 bytes (UTF-16) on Windows.
+// This implementation handles both cases.
 
 std::string Narrow(const wchar_t* s, int len) {
     if (s == nullptr || len <= 0) return std::string();
     std::string out;
     out.reserve(len);
     for (int i = 0; i < len; ++i) {
-        uint32_t cp = static_cast<uint32_t>(s[i]);
+        uint32_t cp;
+        if constexpr (sizeof(wchar_t) == 2) {
+            // UTF-16: handle surrogate pairs
+            uint16_t w = static_cast<uint16_t>(s[i]);
+            if (w >= 0xD800 && w <= 0xDBFF && i + 1 < len) {
+                uint16_t w2 = static_cast<uint16_t>(s[i + 1]);
+                if (w2 >= 0xDC00 && w2 <= 0xDFFF) {
+                    cp = 0x10000 + ((static_cast<uint32_t>(w - 0xD800) << 10) |
+                                    (w2 - 0xDC00));
+                    ++i;
+                } else {
+                    cp = w;
+                }
+            } else {
+                cp = w;
+            }
+        } else {
+            // UTF-32: direct code point
+            cp = static_cast<uint32_t>(s[i]);
+        }
         if (cp < 0x80) {
             out.push_back(static_cast<char>(cp));
         } else if (cp < 0x800) {
@@ -84,12 +80,21 @@ std::wstring Widen(const char* s, int len) {
             ++p;  // skip invalid byte
             continue;
         }
-        out.push_back(static_cast<wchar_t>(cp));
+        if constexpr (sizeof(wchar_t) == 2) {
+            // UTF-16: encode surrogate pairs for code points above U+FFFF
+            if (cp >= 0x10000 && cp < 0x110000) {
+                cp -= 0x10000;
+                out.push_back(static_cast<wchar_t>(0xD800 + (cp >> 10)));
+                out.push_back(static_cast<wchar_t>(0xDC00 + (cp & 0x3FF)));
+            } else {
+                out.push_back(static_cast<wchar_t>(cp));
+            }
+        } else {
+            out.push_back(static_cast<wchar_t>(cp));
+        }
     }
     return out;
 }
-
-#endif  // _WIN32
 
 std::string Narrow(const wchar_t* s) { return Narrow(s, wcslen(s)); }
 
@@ -102,5 +107,3 @@ std::wstring Widen(const char* s) { return Widen(s, strlen(s)); }
 std::wstring Widen(const std::string& s) { return Widen(s.data(), s.length()); }
 
 };  // namespace Vortex
-
-#endif

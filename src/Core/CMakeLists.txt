@@ -68,5 +68,5 @@ list(APPEND SRC
 	"Xmr.cpp")
 
 add_library(Core STATIC ${SRC} ${INC})
-target_link_libraries(Core PRIVATE Freetype::Freetype System OpenGL::GL SDL3::SDL3)
+target_link_libraries(Core PRIVATE Freetype::Freetype System OpenGL::GL)
 target_include_directories(Core PRIVATE ${Stb_INCLUDE_DIR})

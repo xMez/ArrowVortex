@@ -28,7 +28,7 @@ else()
 		"Thread.cpp"
 	)
 	if(APPLE)
-		list(APPEND SRC "NativeMenuBarMacOS.mm")
+		list(APPEND SRC "SystemMacOS.mm" "NativeMenuBarMacOS.mm")
 		list(APPEND INC "NativeMenuBarMacOS.h")
 	endif()
 endif()

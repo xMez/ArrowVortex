@@ -9,9 +9,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <SDL3/SDL.h>
 #include <System/OpenGL.h>
-#include <System/System.h>
-
 #undef ERROR
 
 namespace Vortex {
@@ -42,8 +41,8 @@ static bool sHasLogFile = false;
 void openLogFile() {
     if (sHasLogFile) return;
 
-    std::FILE* fp = nullptr;
-    if (fp = std::fopen(&sLogPath[0], "w")) {
+    std::FILE* fp = std::fopen(sLogPath, "w");
+    if (fp) {
         std::fwrite("\xEF\xBB\xBF", 1, 3, fp);  // UTF-8 BOM.
         std::fclose(fp);
     }
@@ -92,8 +91,8 @@ static const int sBufsize = 1024;
 static bool sLogBlankLine = false;
 
 static void WriteToLogAndConsole(const char* msg) {
-    FILE* fp = nullptr;
-    if (fp = std::fopen(&sLogPath[0], "a")) {
+    std::FILE* fp = std::fopen(sLogPath, "a");
+    if (fp) {
         std::fwrite(msg, 1, std::strlen(msg), fp);
         std::fclose(fp);
     }
@@ -110,7 +109,7 @@ void log(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     char buffer[sBufsize];
-    int n = std::vsnprintf(buffer, sBufsize - 1, fmt, args);
+    int n = vsnprintf(buffer, sBufsize - 1, fmt, args);
     if (n < 0 || n > sBufsize - 1) n = sBufsize - 1;
     buffer[n] = 0;
     WriteToLogAndConsole(buffer);
@@ -158,11 +157,7 @@ void blockEnd() { sLogBlankLine = true; }
 
 namespace DebugPrivate {
 
-#ifndef MAX_PATH
-#define MAX_PATH 4096
-#endif
-
-#define MAX_IGNORE_ID_LEN (MAX_PATH + 16)
+#define MAX_IGNORE_ID_LEN (260 + 16)
 #define MAX_DEBUG_MSG_LEN (1024)
 #define MAX_NUM_IGNORES (32)
 
@@ -192,9 +187,8 @@ static bool AddIgnore(const char* id) {
 
 #ifndef VORTEX_DISABLE_ASSERTS
 
+#ifdef _WIN32
 static HHOOK sHook;
-
-static const char* sDashLine = "-----------------------------------";
 
 static LRESULT CALLBACK CBTProc(INT nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HCBT_ACTIVATE) {
@@ -220,14 +214,19 @@ static int ShowMessageBox(HWND hWnd, LPCSTR lpcText, LPCSTR lpcCaption,
     sHook = SetWindowsHookEx(WH_CBT, &CBTProc, nullptr, GetCurrentThreadId());
     return MessageBox(hWnd, lpcText, lpcCaption, uType);
 }
+#endif
+
+static const char* sDashLine = "-----------------------------------";
 
 bool assrt(const char* exp, const char* file, int line, const char* func,
            const char* fmt, ...) {
     char id[MAX_IGNORE_ID_LEN];
-    sprintf(id, "%s%i", file, line);
+    snprintf(id, MAX_IGNORE_ID_LEN, "%s%i", file, line);
 
-    // Skip leading periods.
-    while (file[0] == '.' && file[1] == '.' && file[2] == '\\') file += 3;
+    // Skip leading path separators.
+    while (file[0] == '.' && file[1] == '.' &&
+           (file[2] == '/' || file[2] == '\\'))
+        file += 3;
 
     // Check if the assert is flagged as ignore.
     if (!ShouldIgnore(id)) {
@@ -239,11 +238,13 @@ bool assrt(const char* exp, const char* file, int line, const char* func,
             char message[MAX_DEBUG_MSG_LEN];
             vsnprintf(message, MAX_DEBUG_MSG_LEN - 1, fmt, args);
             va_end(args);
-            sprintf(buffer, "Assert failed: %s\nFile: %s(%i)\nIn: %s\n%s\n",
-                    exp, file, line, func, message);
+            snprintf(buffer, sizeof(buffer),
+                     "Assert failed: %s\nFile: %s(%i)\nIn: %s\n%s\n", exp,
+                     file, line, func, message);
         } else {
-            sprintf(buffer, "Assert failed: %s\nFile: %s(%i)\nIn: %s\n", exp,
-                    file, line, func);
+            snprintf(buffer, sizeof(buffer),
+                     "Assert failed: %s\nFile: %s(%i)\nIn: %s\n", exp, file,
+                     line, func);
         }
 
         Debug::WriteToLogAndConsole("ASSERT\n");
@@ -251,6 +252,7 @@ bool assrt(const char* exp, const char* file, int line, const char* func,
         Debug::WriteToLogAndConsole(buffer);
         Debug::WriteToLogAndConsole(sDashLine);
 
+#ifdef _WIN32
         int answer = ShowMessageBox(nullptr, buffer, "ASSERT",
                                     MB_ICONERROR | MB_YESNOCANCEL);
         if (answer == IDYES) {
@@ -262,6 +264,36 @@ bool assrt(const char* exp, const char* file, int line, const char* func,
                             "ERROR", MB_ICONERROR | MB_OK);
             }
         }
+#else
+        // Use SDL3 message box with custom buttons: Debug / Ignore Once /
+        // Ignore All on platforms without the native Windows assert dialog.
+        SDL_MessageBoxButtonData buttons[] = {
+            {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Debug"},
+            {0, 1, "Ignore Once"},
+            {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 2, "Ignore All"},
+        };
+        SDL_MessageBoxData data = {};
+        data.flags = SDL_MESSAGEBOX_ERROR;
+        data.window = nullptr;
+        data.title = "ASSERT";
+        data.message = buffer;
+        data.numbuttons = 3;
+        data.buttons = buttons;
+
+        int buttonId = 1;  // default to Ignore Once if dialog fails
+        SDL_ShowMessageBox(&data, &buttonId);
+
+        if (buttonId == 0) {
+            return true;  // Debug
+        } else if (buttonId == 2) {
+            // Ignore All
+            if (!AddIgnore(id)) {
+                SDL_ShowSimpleMessageBox(
+                    SDL_MESSAGEBOX_ERROR, "ERROR",
+                    "Maximum number of ignorable asserts reached.", nullptr);
+            }
+        }
+#endif
     }
 
     return false;
@@ -285,7 +317,7 @@ bool glerr(const char* file, int line, const char* func) {
     int code = glGetError();
     if (code) {
         char id[MAX_IGNORE_ID_LEN];
-        sprintf(id, "%s%i", file, line);
+        snprintf(id, MAX_IGNORE_ID_LEN, "%s%i", file, line);
         if (!ShouldIgnore(id)) {
             Debug::blockBegin(Debug::ERROR, "openGL error");
             Debug::log("location: %s(%i)\n", file, line);

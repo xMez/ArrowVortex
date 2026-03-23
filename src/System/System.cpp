@@ -12,6 +12,7 @@
 #include <System/Debug.h>
 #ifdef __APPLE__
 #include <System/NativeMenuBarMacOS.h>
+extern "C" void ActivateMacOSApp();
 #endif
 
 #include <Core/WideString.h>
@@ -241,6 +242,9 @@ struct SystemImpl : public System {
         if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
             SDL_Log("Couldn't initialize SDL subsystems: %s", SDL_GetError());
         }
+#ifdef __APPLE__
+        ActivateMacOSApp();
+#endif
 
         // Initialize the keymap, which maps windows virtual keys to vortex key
         // codes.
