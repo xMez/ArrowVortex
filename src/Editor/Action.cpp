@@ -693,19 +693,25 @@ bool Action::perform(Type action) {
             break;
         }
         case ZOOM_IN: {
-            gView->setZoomLevel(gView->getZoomLevel() + 0.25);
+            if (gView->getZoomLevel() < 4) {
+                gView->setScaleLevel(gView->getScaleLevel() + 1.0);
+            }
+            gView->setZoomLevel(gView->getZoomLevel() + 1.0);
             break;
         }
         case ZOOM_OUT: {
-            gView->setZoomLevel(gView->getZoomLevel() - 0.25);
+            if (gView->getZoomLevel() <= 4) {
+                gView->setScaleLevel(gView->getScaleLevel() - 1.0);
+            }
+            gView->setZoomLevel(gView->getZoomLevel() - 1.0);
             break;
         }
         case SCALE_INCREASE: {
-            gView->setScaleLevel(gView->getScaleLevel() + 0.25);
+            gView->setScaleLevel(gView->getScaleLevel() + 1.0);
             break;
         }
         case SCALE_DECREASE: {
-            gView->setScaleLevel(gView->getScaleLevel() - 0.25);
+            gView->setScaleLevel(gView->getScaleLevel() - 1.0);
             break;
         }
 

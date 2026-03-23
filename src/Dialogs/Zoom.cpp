@@ -26,13 +26,13 @@ void DialogZoom::myCreateWidgets() {
     slider->value.bind(&myZoomLevel);
     slider->onChange.bind(this, &DialogZoom::onAction,
                           static_cast<int>(ACT_ZOOM));
-    slider->setRange(1.0, 19.0);
+    slider->setRange(1.0, 12.0);
     slider->setTooltip("Zoom Level");
 
     WgSpinner* spinner = myLayout.add<WgSpinner>();
     spinner->value.bind(&myZoomLevel);
-    spinner->setPrecision(2, 2);
-    spinner->setRange(1.0, 19.0);
+    spinner->setPrecision(0, 0);
+    spinner->setRange(1.0, 12.0);
     spinner->setStep(1.0);
     spinner->onChange.bind(this, &DialogZoom::onAction,
                            static_cast<int>(ACT_ZOOM));
@@ -41,20 +41,20 @@ void DialogZoom::myCreateWidgets() {
     slider->value.bind(&myScaleLevel);
     slider->onChange.bind(this, &DialogZoom::onAction,
                           static_cast<int>(ACT_SCALE));
-    slider->setRange(1.0, 10.0);
+    slider->setRange(1.0, 4.0);
     slider->setTooltip("Note Scale");
 
     spinner = myLayout.add<WgSpinner>();
     spinner->value.bind(&myScaleLevel);
-    spinner->setPrecision(2, 2);
-    spinner->setRange(1.0, 10.0);
-    spinner->setStep(0.25);
+    spinner->setPrecision(0, 0);
+    spinner->setRange(1.0, 4.0);
+    spinner->setStep(1.0);
     spinner->onChange.bind(this, &DialogZoom::onAction,
                            static_cast<int>(ACT_SCALE));
 }
 
 void DialogZoom::onTick() {
-    myZoomLevel = gView->getZoomLevel() + 3;
+    myZoomLevel = gView->getZoomLevel();
     myScaleLevel = gView->getScaleLevel();
     EditorDialog::onTick();
 }
@@ -62,7 +62,7 @@ void DialogZoom::onTick() {
 void DialogZoom::onAction(int id) {
     switch (id) {
         case ACT_ZOOM: {
-            gView->setZoomLevel(myZoomLevel - 3);
+            gView->setZoomLevel(myZoomLevel);
         } break;
         case ACT_SCALE: {
             gView->setScaleLevel(myScaleLevel);

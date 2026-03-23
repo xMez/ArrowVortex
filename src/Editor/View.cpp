@@ -349,7 +349,7 @@ struct ViewImpl : public View, public InputHandler {
     }
 
     void setZoomLevel(double level) override {
-        level = std::clamp(level, -2.0, 16.0);
+        level = std::clamp(level, 1.0, 12.0);
         if (myZoomLevel != level) {
             myZoomLevel = level;
             updateScrollValues();
@@ -358,7 +358,7 @@ struct ViewImpl : public View, public InputHandler {
     }
 
     void setScaleLevel(double level) override {
-        level = std::clamp(level, 1.0, 10.0);
+        level = std::clamp(level, 1.0, 4.0);
         if (myScaleLevel != level) {
             myScaleLevel = level;
             gEditor->reportChanges(VCM_ZOOM_CHANGED);
