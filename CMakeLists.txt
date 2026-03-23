@@ -80,7 +80,7 @@ endif()
 
 find_package(FFMPEG QUIET)
 if(NOT FFMPEG_FOUND)
-    pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil libswscale)
+    pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil libswscale libswresample)
 endif()
 pkg_check_modules(FFMPEG_SWRESAMPLE REQUIRED IMPORTED_TARGET libswresample)
 
@@ -105,7 +105,10 @@ if(NOT Ogg_FOUND)
 endif()
 
 find_package(OpenGL REQUIRED)
-find_package(SDL3 CONFIG REQUIRED)
+find_package(SDL3 CONFIG QUIET)
+if(NOT SDL3_FOUND)
+    pkg_check_modules(SDL3 REQUIRED IMPORTED_TARGET sdl3)
+endif()
 
 find_package(Stb CONFIG QUIET)
 if(NOT Stb_FOUND AND NOT TARGET unofficial::stb::stb)

@@ -2,10 +2,13 @@
 #include <System/OpenGL.h>
 #include <Core/WideString.h>
 #include <vector>
+#ifdef __APPLE__
+#include <System/NativeMenuBarMacOS.h>
+#endif
 
 namespace Vortex {
 
-#ifndef GL_MENU_BAR
+#ifdef _WIN32
 MenuItem* MenuItem::create() {
     return reinterpret_cast<MenuItem*>(CreatePopupMenu());
 }
@@ -41,6 +44,40 @@ void MenuItem::setChecked(Action::Type item, bool state) {
 void MenuItem::setEnabled(Action::Type item, bool state) {
     EnableMenuItem(reinterpret_cast<HMENU>(this), item,
                    state ? MF_ENABLED : MF_GRAYED);
+}
+#elif defined(__APPLE__)
+MenuItem* MenuItem::create() {
+    return reinterpret_cast<MenuItem*>(CreateNativeMenu());
+}
+
+void MenuItem::addSeperator() {
+    NativeMenuAddSeparator(reinterpret_cast<void*>(this));
+}
+
+void MenuItem::addItem(Action::Type item, const std::string& text) {
+    NativeMenuAddItem(reinterpret_cast<void*>(this), item, text.c_str());
+}
+
+void MenuItem::addSubmenu(MenuItem* submenu, const std::string& text,
+                          bool grayed) {
+    NativeMenuAddSubmenu(reinterpret_cast<void*>(this),
+                         reinterpret_cast<void*>(submenu), text.c_str(),
+                         grayed);
+}
+
+void MenuItem::replaceSubmenu(int pos, MenuItem* submenu,
+                              const std::string& text, bool grayed) {
+    NativeMenuReplaceSubmenu(reinterpret_cast<void*>(this), pos,
+                              reinterpret_cast<void*>(submenu), text.c_str(),
+                              grayed);
+}
+
+void MenuItem::setChecked(Action::Type item, bool state) {
+    NativeMenuSetChecked(reinterpret_cast<void*>(this), item, state);
+}
+
+void MenuItem::setEnabled(Action::Type item, bool state) {
+    NativeMenuSetEnabled(reinterpret_cast<void*>(this), item, state);
 }
 #else
 MenuItem* MenuItem::create() { return new MenuItem(); }

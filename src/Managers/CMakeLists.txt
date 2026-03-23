@@ -20,4 +20,4 @@ list(APPEND SRC
 
 
 add_library(Managers STATIC ${SRC} ${INC})
-target_link_libraries(Managers PRIVATE Core Editor Simfile System SDL3::SDL3)
+target_link_libraries(Managers PRIVATE Core Editor Simfile System)

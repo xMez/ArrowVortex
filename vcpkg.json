@@ -12,6 +12,7 @@
   "dependencies": [
     "freetype",
     "iir1",
+    "aubio",
     "stb",
     {
       "name": "ffmpeg",

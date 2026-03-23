@@ -1088,6 +1088,15 @@ struct EditorImpl : public Editor, public InputHandler {
 
 Editor* gEditor = nullptr;
 
+#ifdef __APPLE__
+void NativeMenuActionDispatch(int actionId) {
+    if (gEditor) {
+        Debug::menuLog("NativeMenuActionDispatch: actionId=%d\n", actionId);
+        gEditor->onMenuAction(actionId);
+    }
+}
+#endif
+
 void Editor::create() {
     gEditor = new EditorImpl;
     static_cast<EditorImpl*>(gEditor)->init();

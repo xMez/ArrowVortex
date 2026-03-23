@@ -10,6 +10,9 @@
 #include <System/System.h>
 #include <System/File.h>
 #include <System/Debug.h>
+#ifdef __APPLE__
+#include <System/NativeMenuBarMacOS.h>
+#endif
 
 #include <Core/WideString.h>
 #include <Core/StringUtils.h>
@@ -325,7 +328,7 @@ struct SystemImpl : public System {
     // SystemImpl :: message loop.
 
     void createMenu() override {
-#ifndef GL_MENU_BAR
+#ifdef _WIN32
         HMENU menu = CreateMenu();
         gMenubar->init(reinterpret_cast<MenuItem*>(menu));
         SetMenu(GetActiveWindow(), menu);
@@ -339,7 +342,11 @@ struct SystemImpl : public System {
             },
             nullptr);
 #else
-        gMenubar->init(new MenuItem);
+        MenuItem* menu = MenuItem::create();
+        gMenubar->init(menu);
+#ifdef __APPLE__
+        InstallNativeMenuBar(reinterpret_cast<void*>(menu));
+#endif
 #endif
     }
 

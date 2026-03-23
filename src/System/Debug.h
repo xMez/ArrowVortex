@@ -34,6 +34,9 @@ void openConsole();
 /// Writes a message to the log.
 void log(const char* fmt, ...);
 
+/// Writes a menu debug message with [MENU] prefix to log and stderr.
+void menuLog(const char* fmt, ...);
+
 /// Writes a blank line before the next log message.
 void logBlankLine();
 

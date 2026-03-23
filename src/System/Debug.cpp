@@ -117,6 +117,21 @@ void log(const char* fmt, ...) {
     va_end(args);
 }
 
+void menuLog(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    char buffer[sBufsize];
+    int n = vsnprintf(buffer, sBufsize - 1, fmt, args);
+    if (n < 0 || n > sBufsize - 1) n = sBufsize - 1;
+    buffer[n] = 0;
+    va_end(args);
+
+    char prefixed[sBufsize + 32];
+    snprintf(prefixed, sizeof(prefixed), "[MENU] %s", buffer);
+    WriteToLogAndConsole(prefixed);
+    fprintf(stderr, "%s", prefixed);
+}
+
 void logBlankLine() { sLogBlankLine = true; }
 
 void blockBegin(Type type, const char* title) {
