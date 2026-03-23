@@ -37,6 +37,8 @@ struct Chart : NonCopyable {
 
     const Style* style = nullptr;
     std::string artist;
+    std::string tech;
+    std::string name;
     Difficulty difficulty = DIFF_CHALLENGE;
     std::vector<double> radar;
     int meter = 1;

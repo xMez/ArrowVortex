@@ -61,6 +61,8 @@ void DialogChartProperties::onChanges(int changes) {
 
             myRating = gChart->getMeter();
             myStepArtist = gChart->getStepArtist();
+            myTechNotation = gChart->getTechNotation();
+            myChartName = gChart->getChartName();
             myDifficulty = gChart->getDifficulty();
             myStyleList->addItem(gStyle->get()->name.c_str());
 
@@ -69,6 +71,8 @@ void DialogChartProperties::onChanges(int changes) {
 
             myRating = 0;
             myStepArtist.clear();
+            myTechNotation.clear();
+            myChartName.clear();
             myDifficulty = -1;
             myStyleList->clearItems();
         }
@@ -124,10 +128,28 @@ void DialogChartProperties::myCreateChartProperties() {
     artist->text.bind(&myStepArtist);
     artist->onChange.bind(this, &DialogChartProperties::mySetStepArtist);
     artist->setTooltip("Author of the chart");
+
+    WgLineEdit* tech = myLayout.add<WgLineEdit>("Tech");
+    tech->text.bind(&myTechNotation);
+    tech->onChange.bind(this, &DialogChartProperties::mySetTechNotation);
+    tech->setTooltip("Tech notation for the chart");
+
+    WgLineEdit* name = myLayout.add<WgLineEdit>("Chart name");
+    name->text.bind(&myChartName);
+    name->onChange.bind(this, &DialogChartProperties::mySetChartName);
+    name->setTooltip("Name of the chart");
 }
 
 void DialogChartProperties::mySetStepArtist() {
     gChart->setStepArtist(myStepArtist);
+}
+
+void DialogChartProperties::mySetTechNotation() {
+    gChart->setTechNotation(myTechNotation);
+}
+
+void DialogChartProperties::mySetChartName() {
+    gChart->setChartName(myChartName);
 }
 
 void DialogChartProperties::mySetDifficulty() {

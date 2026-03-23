@@ -587,11 +587,15 @@ static void WriteChart(ExportData& data) {
 
     std::string chartStyle = Escape("chart style", chart->style->id);
     std::string chartArtist = Escape("chart artist", chart->artist);
+    std::string chartTech = Escape("chart tech", chart->tech);
+    std::string chartName = Escape("chart name", chart->name);
 
     if (data.ssc) {
         WriteTag(data, "NOTEDATA", std::string(), ALWAYS, true);
         WriteTag(data, "STEPSTYPE", chartStyle, ALWAYS, true);
-        WriteTag(data, "DESCRIPTION", chartArtist, ALWAYS, true);
+        WriteTag(data, "CREDIT", chartArtist, ALWAYS, true);
+        WriteTag(data, "DESCRIPTION", chartTech, ALWAYS, true);
+        WriteTag(data, "CHARTNAME", chartName, ALWAYS, true);
         WriteTag(data, "DIFFICULTY", GetDifficultyString(diff), ALWAYS, true);
         WriteTag(data, "METER", chart->meter, ALWAYS, true);
         WriteTag(data, "RADARVALUES", RadarToString(chart->radar), ALWAYS,

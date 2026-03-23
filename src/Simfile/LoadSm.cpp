@@ -624,9 +624,11 @@ static void MapSimfileTags(StrMap& str, FuncMap& map, Simfile* sim) {
 static void MapChartTags(FuncMap& map) {
     MapSharedTags(map);
 
+    map["CREDIT"] = [](PARSE_ARGS) { data.chart->artist = UnescapeTag(str); };
     map["DESCRIPTION"] = [](PARSE_ARGS) {
-        data.chart->artist = UnescapeTag(str);
+        data.chart->tech = UnescapeTag(str);
     };
+    map["CHARTNAME"] = [](PARSE_ARGS) { data.chart->name = UnescapeTag(str); };
     map["DIFFICULTY"] = [](PARSE_ARGS) {
         data.chart->difficulty = ToDiff(str);
     };

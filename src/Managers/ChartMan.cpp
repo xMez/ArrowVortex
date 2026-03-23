@@ -23,6 +23,8 @@ struct ChartManImpl : public ChartMan {
     Chart* myChart;
 
     History::EditId myApplyStepArtistId;
+    History::EditId myApplyTechNotationId;
+    History::EditId myApplyChartNameId;
     History::EditId myApplyMeterId;
     History::EditId myApplyDifficultyId;
 
@@ -35,6 +37,8 @@ struct ChartManImpl : public ChartMan {
         myChart = nullptr;
 
         myApplyStepArtistId = gHistory->addCallback(ApplyStepArtist);
+        myApplyTechNotationId = gHistory->addCallback(ApplyTechNotation);
+        myApplyChartNameId = gHistory->addCallback(ApplyChartName);
         myApplyMeterId = gHistory->addCallback(ApplyMeter);
         myApplyDifficultyId = gHistory->addCallback(ApplyDifficulty);
     }
@@ -71,6 +75,71 @@ struct ChartManImpl : public ChartMan {
 
             gSimfile->openChart(bound.chart);
             bound.chart->artist = newVal;
+            gEditor->reportChanges(VCM_CHART_PROPERTIES_CHANGED);
+        }
+        return msg;
+    }
+
+    // ================================================================================================
+    // ChartManImpl :: tech notation editing.
+
+    void myQueueTechNotation(std::string tech) {
+        WriteStream stream;
+        stream.writeStr(myChart->tech);
+        stream.writeStr(tech);
+        gHistory->addEntry(myApplyTechNotationId, stream.data(), stream.size(),
+                           myChart);
+    }
+
+    static std::string ApplyTechNotation(ReadStream& in,
+                                         History::Bindings bound, bool undo,
+                                         bool redo) {
+        std::string msg;
+        std::string before = in.readStr();
+        std::string after = in.readStr();
+        if (in.success()) {
+            const std::string& newVal = undo ? before : after;
+
+            msg = bound.chart->description();
+            msg = msg + " :: ";
+            msg = msg + (undo ? "reverted" : "changed");
+            msg = msg + " tech notation to ";
+            msg = msg + newVal;
+
+            gSimfile->openChart(bound.chart);
+            bound.chart->tech = newVal;
+            gEditor->reportChanges(VCM_CHART_PROPERTIES_CHANGED);
+        }
+        return msg;
+    }
+
+    // ================================================================================================
+    // ChartManImpl :: chart name editing.
+
+    void myQueueChartName(std::string name) {
+        WriteStream stream;
+        stream.writeStr(myChart->name);
+        stream.writeStr(name);
+        gHistory->addEntry(myApplyChartNameId, stream.data(), stream.size(),
+                           myChart);
+    }
+
+    static std::string ApplyChartName(ReadStream& in, History::Bindings bound,
+                                      bool undo, bool redo) {
+        std::string msg;
+        std::string before = in.readStr();
+        std::string after = in.readStr();
+        if (in.success()) {
+            const std::string& newVal = undo ? before : after;
+
+            msg = bound.chart->description();
+            msg = msg + " :: ";
+            msg = msg + (undo ? "reverted" : "changed");
+            msg = msg + " chart name to ";
+            msg = msg + newVal;
+
+            gSimfile->openChart(bound.chart);
+            bound.chart->name = newVal;
             gEditor->reportChanges(VCM_CHART_PROPERTIES_CHANGED);
         }
         return msg;
@@ -156,6 +225,18 @@ struct ChartManImpl : public ChartMan {
         }
     }
 
+    void setTechNotation(std::string tech) override {
+        if (myChart && myChart->tech != tech) {
+            myQueueTechNotation(tech);
+        }
+    }
+
+    void setChartName(std::string name) override {
+        if (myChart && myChart->name != name) {
+            myQueueChartName(name);
+        }
+    }
+
     void setMeter(int meter) override {
         if (myChart && myChart->meter != meter) {
             myQueueMeter(meter);
@@ -171,6 +252,14 @@ struct ChartManImpl : public ChartMan {
 
     std::string getStepArtist() const override {
         return myChart ? myChart->artist : std::string();
+    }
+
+    std::string getTechNotation() const override {
+        return myChart ? myChart->tech : std::string();
+    }
+
+    std::string getChartName() const override {
+        return myChart ? myChart->name : std::string();
     }
 
     Difficulty getDifficulty() const override {

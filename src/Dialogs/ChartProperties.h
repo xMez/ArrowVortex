@@ -16,6 +16,8 @@ class DialogChartProperties : public EditorDialog {
    private:
     void myCreateChartProperties();
     void mySetStepArtist();
+    void mySetTechNotation();
+    void mySetChartName();
     void mySetDifficulty();
     void mySetRating();
     void myCalcRating();
@@ -42,7 +44,7 @@ class DialogChartProperties : public EditorDialog {
     WgLabel* myNoteDensity;
     WgLabel* myStreamMeasureCount;
     WgDroplist* myStyleList;
-    std::string myStepArtist;
+    std::string myStepArtist, myTechNotation, myChartName;
 
     int myRating = 1, myDifficulty = 0, myStyle = 0;
 };

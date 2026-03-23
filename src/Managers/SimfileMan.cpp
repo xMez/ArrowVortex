@@ -276,12 +276,14 @@ struct SimfileManImpl : public SimfileMan {
         return msg;
     }
 
-    void addChart(const Style* style, std::string artist, Difficulty difficulty,
-                  int meter) override {
+    void addChart(const Style* style, std::string artist, std::string tech,
+                  std::string name, Difficulty difficulty, int meter) override {
         Chart* chart = new Chart;
 
         chart->style = style;
         chart->artist = artist;
+        chart->tech = tech;
+        chart->name = name;
         chart->difficulty = difficulty;
         chart->meter = meter;
 

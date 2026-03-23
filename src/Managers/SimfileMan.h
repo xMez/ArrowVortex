@@ -32,7 +32,8 @@ struct SimfileMan {
 
     /// Inserts a new chart into the chart list and opens it for editing.
     virtual void addChart(const Style* style, std::string artist,
-                          Difficulty diff, int meter) = 0;
+                          std::string tech, std::string name, Difficulty diff,
+                          int meter) = 0;
 
     /// Removes a chart from the chart list, and closes it if necessary.
     virtual void removeChart(const Chart* chart) = 0;

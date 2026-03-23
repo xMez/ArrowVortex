@@ -16,7 +16,7 @@ class DialogNewChart : public EditorDialog {
     void myCreateChart();
 
     WgDroplist* myStyleList;
-    std::string myStepArtist;
+    std::string myStepArtist, myTechNotation, myChartName;
     int myRating = 1, myDifficulty = 0, myStyle = 0;
 };
 

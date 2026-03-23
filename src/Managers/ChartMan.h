@@ -21,6 +21,12 @@ struct ChartMan {
     /// Sets the step artist of the current chart.
     virtual void setStepArtist(std::string stepArtist) = 0;
 
+    /// Sets the tech notation for the current chart.
+    virtual void setTechNotation(std::string techNotation) = 0;
+
+    /// Sets the name of the current chart.
+    virtual void setChartName(std::string chartName) = 0;
+
     /// Sets the difficulty of the current chart.
     virtual void setDifficulty(Difficulty dt) = 0;
 
@@ -29,6 +35,12 @@ struct ChartMan {
 
     /// Returns the step artist of the current chart.
     virtual std::string getStepArtist() const = 0;
+
+    /// Returns the tech notation for the current chart.
+    virtual std::string getTechNotation() const = 0;
+
+    /// Returns the name of the current chart.
+    virtual std::string getChartName() const = 0;
 
     /// Returns the difficulty type of the current chart (e.g. Challenge).
     virtual Difficulty getDifficulty() const = 0;

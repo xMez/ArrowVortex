@@ -1085,7 +1085,8 @@ struct EditingImpl : public Editing {
             std::stable_sort(edit.add.begin(), edit.add.end(),
                              LessThanRowCol<Note, Note>);
 
-            gSimfile->addChart(style, c->artist, c->difficulty, c->meter);
+            gSimfile->addChart(style, c->artist, c->tech, c->name,
+                               c->difficulty, c->meter);
             gNotes->modify(edit, true, nullptr);
         }
 
@@ -1163,8 +1164,8 @@ struct EditingImpl : public Editing {
             std::stable_sort(edit.add.begin(), edit.add.end(),
                              LessThanRowCol<Note, Note>);
 
-            gSimfile->addChart(danceRoutine, c->artist, c->difficulty,
-                               c->meter);
+            gSimfile->addChart(danceRoutine, c->artist, c->tech, c->name,
+                               c->difficulty, c->meter);
             gNotes->modify(edit, true, nullptr);
         }
 

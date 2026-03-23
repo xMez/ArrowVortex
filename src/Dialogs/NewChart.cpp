@@ -52,6 +52,14 @@ void DialogNewChart::myCreateWidgets() {
     artist->setTooltip("Author of the chart");
     artist->text.bind(&myStepArtist);
 
+    WgLineEdit* tech = myLayout.add<WgLineEdit>("Tech");
+    tech->setTooltip("Tech notation for the chart");
+    tech->text.bind(&myTechNotation);
+
+    WgLineEdit* name = myLayout.add<WgLineEdit>("Chart name");
+    name->setTooltip("Name of the chart");
+    name->text.bind(&myChartName);
+
     myLayout.row().col(312);
     myLayout.add<WgSeperator>();
 
@@ -67,8 +75,8 @@ void DialogNewChart::myCreateWidgets() {
 void DialogNewChart::myCreateChart() {
     if (gSimfile->isOpen()) {
         auto difficulty = static_cast<Difficulty>(myDifficulty);
-        gSimfile->addChart(gStyle->get(myStyle), myStepArtist, difficulty,
-                           myRating);
+        gSimfile->addChart(gStyle->get(myStyle), myStepArtist, myTechNotation,
+                           myChartName, difficulty, myRating);
         requestClose();
     } else {
         HudNote("%s", "Open a simfile or music file first.");
