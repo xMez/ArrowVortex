@@ -40,7 +40,7 @@ extern "C" void ActivateMacOSApp();
 #include <map>
 #include <mutex>
 #include <locale>
-#include <condition_variable>
+#include <atomic>
 
 #undef DELETE
 
@@ -73,10 +73,9 @@ static int wglSwapInterval;
 
 static std::string outPath;
 std::mutex fileDialogMutex;
-std::condition_variable fileDialogCv;
 fs::path fileDialogPath;
 int file_extension_index = 0;
-bool isDialogClosed = false;
+std::atomic<bool> isDialogClosed = false;
 
 // Mapping of windows virtual keys to vortex key codes.
 static const int VKtoKCmap[] = {SDLK_GRAVE,        Key::ACCENT,
@@ -127,67 +126,58 @@ static const int VKtoKCmap[] = {SDLK_GRAVE,        Key::ACCENT,
 static void SDLCALL FileDialogOpenCallback(void* userdata,
                                            const char* const* filelist,
                                            int filter) {
-    if (!filelist) {
+    {
+        std::lock_guard lock(fileDialogMutex);
+        if (filelist && filelist[0]) {
+            fileDialogPath = utf8ToPath(filelist[0]);
+        }
+    }
+    isDialogClosed.store(true, std::memory_order_release);
+    if (!filelist)
         HudError("Failed to open the file dialog: \"%s\".", SDL_GetError());
-        return;
-    }
-    if (filelist[0]) {
-        fileDialogPath = utf8ToPath(filelist[0]);
-    }
-    isDialogClosed = true;
-    fileDialogCv.notify_all();
-    return;
 }
 
 static void SDLCALL FileDialogSaveCallback(void* userdata,
                                            const char* const* filelist,
                                            int filter) {
-    if (!filelist) {
+    {
+        std::lock_guard lock(fileDialogMutex);
+        if (filelist && filelist[0]) {
+            fileDialogPath = utf8ToPath(filelist[0]);
+        }
+        file_extension_index = filter;
+    }
+    isDialogClosed.store(true, std::memory_order_release);
+    if (!filelist)
         HudError("Failed to open the file dialog: \"%s\".", SDL_GetError());
-        return;
-    }
-    if (filelist[0]) {
-        fileDialogPath = utf8ToPath(filelist[0]);
-    }
-    file_extension_index = filter;
-    isDialogClosed = true;
-    fileDialogCv.notify_all();
-    return;
 }
 
 // Shows an open/save message box and returns the path selected by the user.
 fs::path ShowFileDialog(std::string title, fs::path path,
                         SDL_DialogFileFilter filters[], int num_filters,
                         int* index, bool save) {
-    fileDialogPath.clear();
-    isDialogClosed = false;
-    std::unique_lock<std::mutex> lock(fileDialogMutex);
+    {
+        std::lock_guard lock(fileDialogMutex);
+        fileDialogPath.clear();
+        file_extension_index = 0;
+    }
+    isDialogClosed.store(false, std::memory_order_release);
+    const std::string initialPath = pathToUtf8(path);
     if (save) {
         SDL_ShowSaveFileDialog(FileDialogSaveCallback, nullptr, nullptr,
-                               filters, num_filters, pathToUtf8(path).c_str());
+                               filters, num_filters, initialPath.c_str());
     } else {
         SDL_ShowOpenFileDialog(FileDialogOpenCallback, nullptr, nullptr,
-                               filters, num_filters, pathToUtf8(path).c_str(),
-                               false);
+                               filters, num_filters, initialPath.c_str(), false);
     }
 
-#ifdef __linux__
-    /* On Fedora, SDL won't run the callback when the dialog is closed since the
-       action triggers a DBus event SDL needs to process first.
-       Only the main thread can pump events so we regularly signal it to do so.
-       Yes, it's silly. */
-    std::jthread signal([] {
-        while (!isDialogClosed) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            fileDialogCv.notify_all();
-        }
-    });
-#endif  // __linux__
-    fileDialogCv.wait(lock, [] {
+    while (!isDialogClosed.load(std::memory_order_acquire)) {
         SDL_PumpEvents();
-        return isDialogClosed || !fileDialogPath.empty();
-    });
-    if (save) *index = file_extension_index;
+        SDL_Delay(10);
+    }
+
+    std::lock_guard lock(fileDialogMutex);
+    if (save && index) *index = file_extension_index;
     return fileDialogPath;
 }
 
