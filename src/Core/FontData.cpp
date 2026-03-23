@@ -3,6 +3,7 @@
 #include <Core/FontManager.h>
 #include <Core/Texture.h>
 
+#include <algorithm>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_GLYPH_H

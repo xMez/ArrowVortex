@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <math.h>
 #include <cfloat>
+#include <climits>
 
 #include <Core/ByteStream.h>
 #include <Core/StringUtils.h>
