@@ -143,6 +143,10 @@ void blockEnd() { sLogBlankLine = true; }
 
 namespace DebugPrivate {
 
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
+
 #define MAX_IGNORE_ID_LEN (MAX_PATH + 16)
 #define MAX_DEBUG_MSG_LEN (1024)
 #define MAX_NUM_IGNORES (32)

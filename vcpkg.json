@@ -12,11 +12,13 @@
   "dependencies": [
     "freetype",
     "iir1",
-    "aubio",
     "stb",
     {
       "name": "ffmpeg",
-      "features": [ "vorbis" ]
+      "features": [
+        "ffmpeg",
+        "vorbis"
+      ]
     },
     "libmad",
     "libogg",

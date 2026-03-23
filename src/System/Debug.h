@@ -8,7 +8,7 @@
 #define VORTEX_DISABLE_ASSERTS
 #define VORTEX_DISABLE_CHECKPOINTS
 #else
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #define VORTEX_DISABLE_ASSERTS
 #define VORTEX_DISABLE_CHECKPOINTS
 #endif

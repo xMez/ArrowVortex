@@ -99,7 +99,9 @@
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": [ "Linux" ]
+          "hostOS": [
+            "Linux"
+          ]
         },
         "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
           "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
@@ -125,12 +127,82 @@
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": [ "Linux" ]
+          "hostOS": [
+            "Linux"
+          ]
         },
         "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
           "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
         }
       }
+    },
+    {
+      "name": "vcpkg",
+      "displayName": "vcpkg Configuration (Auto-detect Architecture)",
+      "description": "Configure with vcpkg toolchain, automatically detecting architecture",
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
+      },
+      "environment": {
+        "VCPKG_DEFAULT_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
+      }
+    },
+    {
+      "name": "vcpkg-arm64",
+      "displayName": "vcpkg Configuration (Apple Silicon)",
+      "description": "Configure with vcpkg toolchain for Apple Silicon (ARM64)",
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx"
+      }
+    },
+    {
+      "name": "vcpkg-x64",
+      "displayName": "vcpkg Configuration (Intel)",
+      "description": "Configure with vcpkg toolchain for Intel (x64)",
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-osx"
+      }
+    },
+    {
+      "name": "vcpkg-debug",
+      "displayName": "vcpkg Debug Configuration",
+      "description": "Configure with vcpkg toolchain (Debug)",
+      "binaryDir": "${sourceDir}/build-debug",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VCPKG_TARGET_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
+      },
+      "environment": {
+        "VCPKG_DEFAULT_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vcpkg",
+      "configurePreset": "vcpkg"
+    },
+    {
+      "name": "vcpkg-arm64",
+      "configurePreset": "vcpkg-arm64"
+    },
+    {
+      "name": "vcpkg-x64",
+      "configurePreset": "vcpkg-x64"
+    },
+    {
+      "name": "vcpkg-debug",
+      "configurePreset": "vcpkg-debug"
     }
   ]
 }
