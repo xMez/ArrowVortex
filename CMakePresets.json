@@ -138,16 +138,12 @@
     },
     {
       "name": "vcpkg",
-      "displayName": "vcpkg Configuration (Auto-detect Architecture)",
-      "description": "Configure with vcpkg toolchain, automatically detecting architecture",
+      "displayName": "vcpkg Configuration (Auto-detect)",
+      "description": "Configure with vcpkg toolchain, automatically detecting host triplet",
       "binaryDir": "${sourceDir}/build",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "VCPKG_TARGET_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
-      },
-      "environment": {
-        "VCPKG_DEFAULT_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
@@ -179,11 +175,7 @@
       "binaryDir": "${sourceDir}/build-debug",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "VCPKG_TARGET_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
-      },
-      "environment": {
-        "VCPKG_DEFAULT_TRIPLET": "$penv{VCPKG_DEFAULT_TRIPLET}"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],
