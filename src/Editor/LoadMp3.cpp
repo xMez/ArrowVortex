@@ -24,7 +24,7 @@ enum ID3Tagtype {
     TAGTYPE_ID3V2_FOOTER
 };
 
-static ID3Tagtype ID3GetTagtype(const uint8_t *data, id3_length_t length) {
+static ID3Tagtype ID3GetTagtype(const uint8_t* data, id3_length_t length) {
     if (length >= 3 && data[0] == 'T' && data[1] == 'A' && data[2] == 'G')
         return TAGTYPE_ID3V1;
 
@@ -38,7 +38,7 @@ static ID3Tagtype ID3GetTagtype(const uint8_t *data, id3_length_t length) {
     return TAGTYPE_NONE;
 }
 
-static uint64_t ID3ParseUint(const uint8_t **ptr, uint32_t bytes) {
+static uint64_t ID3ParseUint(const uint8_t** ptr, uint32_t bytes) {
     uint64_t value = 0;
     switch (bytes) {
         case 4:
@@ -53,7 +53,7 @@ static uint64_t ID3ParseUint(const uint8_t **ptr, uint32_t bytes) {
     return value;
 }
 
-static uint64_t ID3ParseSyncsafe(const uint8_t **ptr, uint32_t bytes) {
+static uint64_t ID3ParseSyncsafe(const uint8_t** ptr, uint32_t bytes) {
     uint64_t value = 0;
     switch (bytes) {
         case 5:
@@ -67,15 +67,15 @@ static uint64_t ID3ParseSyncsafe(const uint8_t **ptr, uint32_t bytes) {
     return value;
 }
 
-static void ID3ParseHeader(const uint8_t **ptr, uint32_t *version, int *flags,
-                           id3_length_t *size) {
+static void ID3ParseHeader(const uint8_t** ptr, uint32_t* version, int* flags,
+                           id3_length_t* size) {
     *ptr += 3;
     *version = ID3ParseUint(ptr, 2);
     *flags = ID3ParseUint(ptr, 1);
     *size = ID3ParseSyncsafe(ptr, 4);
 }
 
-static long ID3TagQuery(const uint8_t *data, id3_length_t length) {
+static long ID3TagQuery(const uint8_t* data, id3_length_t length) {
     uint32_t version;
     int flags;
     id3_length_t size;
@@ -117,7 +117,7 @@ enum XingFlags {
     XING_SCALE = 0x00000008L
 };
 
-static int XingParse(XingHeader *xing, struct mad_bitptr ptr,
+static int XingParse(XingHeader* xing, struct mad_bitptr ptr,
                      unsigned int bitlen) {
     const uint32_t XING_MAGIC = (('X' << 24) | ('i' << 16) | ('n' << 8) | 'g');
     const uint32_t INFO_MAGIC = (('I' << 24) | ('n' << 16) | ('f' << 8) | 'o');
@@ -152,7 +152,7 @@ static int XingParse(XingHeader *xing, struct mad_bitptr ptr,
     if (xing->flags & XING_TOC) {
         if (bitlen < 800) goto fail;
 
-        for (unsigned char &i : xing->toc)
+        for (unsigned char& i : xing->toc)
             i = static_cast<unsigned char>(mad_bit_read(&ptr, 8));
 
         bitlen -= 800;
@@ -183,7 +183,7 @@ struct MP3Loader : public SoundSource {
     int getNumFrames() override { return 0; }
     int getNumChannels() override { return numChannels; }
     int getBytesPerSample() override { return 2; }
-    int readFrames(int frames, short *buffer) override;
+    int readFrames(int frames, short* buffer) override;
 
     int fillInputBuffer();
     bool decodeFirstFrame();
@@ -245,7 +245,7 @@ int MP3Loader::fillInputBuffer() {
 
     bool eofBeforeReading = file.eof();
 
-    file.read(reinterpret_cast<char *>(fileBuf + inbytes),
+    file.read(reinterpret_cast<char*>(fileBuf + inbytes),
               sizeof(fileBuf) - inbytes - MAD_BUFFER_GUARD);
     std::streamsize rc = file.gcount();
     if (rc < 0) return -1;
@@ -366,7 +366,7 @@ void MP3Loader::synthDecodedFrame() {
     }
 }
 
-int MP3Loader::readFrames(int frames, short *buffer) {
+int MP3Loader::readFrames(int frames, short* buffer) {
     int framesWritten = 0;
     while (frames > 0) {
         // Copy the synthesized samples that are left in the synth buffer.
@@ -397,8 +397,8 @@ int MP3Loader::readFrames(int frames, short *buffer) {
 
 };  // anonymous namespace.
 
-SoundSource *LoadMP3(std::ifstream &&file, std::string &title,
-                     std::string &artist) {
+SoundSource* LoadMP3(std::ifstream&& file, std::string& title,
+                     std::string& artist) {
     std::unique_ptr<MP3Loader> loader = std::make_unique<MP3Loader>();
 
     // Check if the file stream is valid.
