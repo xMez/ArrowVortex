@@ -2,14 +2,21 @@
 
 #include <Core/Input.h>
 #include <filesystem>
+#include <vector>
 namespace fs = std::filesystem;
 
 namespace Vortex {
 
-// Example filters string for open/save file: "Text (*.txt)\0*.txt\0All Files
-// (*.*)\0*.*\0". In save file, the index of the filter selected by the user is
-// written to outFilterIndex, starting with index 1. If the user selected a
-// custom filter, filterIndex is set to zero.
+class NativeMenuBackend;
+
+/// Describes a single file type filter for open/save dialogs.
+/// `name` is the user-visible description (e.g. "Stepmania/ITG (*.sm)").
+/// `pattern` lists the extensions without the leading "*.", separated by
+/// semicolons (e.g. "sm;ssc;dwi"). Use "*" to match all files.
+struct FileFilter {
+    std::string name;
+    std::string pattern;
+};
 
 struct System {
     // Helper struct for building the menu bar.
@@ -25,6 +32,11 @@ struct System {
 
         void setChecked(int item, bool checked);
         void setEnabled(int item, bool checked);
+        struct Impl;
+
+        explicit MenuItem(Impl* impl);
+
+        Impl* myImpl = nullptr;
     };
 
     /// Helper struct for running system commands.
@@ -47,15 +59,16 @@ struct System {
                                   Buttons buttons = T_OK,
                                   Icon icon = I_INFO) = 0;
 
-    /// Shows an open file dialog, see class description.
+    /// Shows an open file dialog.
     virtual fs::path openFileDlg(
-        const std::string& title, fs::path initialPath = std::string(),
-        const std::string& extFilters = std::string()) = 0;
+        const std::string& title, fs::path initialPath = {},
+        const std::vector<FileFilter>& filters = {}) = 0;
 
-    /// Shows a save file dialog, see class description.
+    /// Shows a save file dialog.  The selected filter index (1-based) is
+    /// written to outFilterIndex if non-null.  Zero means a custom filter.
     virtual fs::path saveFileDlg(const std::string& title,
-                                 fs::path initialPath = std::string(),
-                                 const std::string& extFilters = std::string(),
+                                 fs::path initialPath = {},
+                                 const std::vector<FileFilter>& filters = {},
                                  int* outFilterIndex = nullptr) = 0;
 
     /// Runs a system command.

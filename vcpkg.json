@@ -12,6 +12,7 @@
   "dependencies": [
     "freetype",
     "iir1",
+    "sdl3",
     "aubio",
     "stb",
     {

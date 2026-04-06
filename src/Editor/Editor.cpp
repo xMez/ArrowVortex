@@ -68,23 +68,26 @@ struct DialogEntry {
     bool requestOpen;
 };
 
-static const char loadFilters[] =
-    "Supported Media (*.sm, *.ssc, *.dwi, *.osu, *.osz, *.ogg, *.mp3, "
-    "*.wav)\0*.sm;*.ssc;*.dwi;*.osu;*.osz;*.ogg;*.mp3;*.wav\0"
-    "Stepmania/ITG (*.sm)\0*.sm\0"
-    "Stepmania 5 (*.ssc)\0*.ssc\0"
-    "Dance With Intensity (*.dwi)\0*.dwi\0"
-    "Osu!mania (*.osu, *.osz)\0*.osu;*.osz\0"
-    "Ogg Vorbis (*.ogg)\0*.ogg\0"
-    "MP3 Audio (*.mp3)\0*.mp3\0"
-    "Waveform (*.wav)\0*.wav\0"
-    "All Files (*.*)\0*.*\0";
+static const std::vector<FileFilter> loadFilters = {
+    {"Supported Media (*.sm, *.ssc, *.dwi, *.osu, *.osz, *.ogg, *.mp3, "
+     "*.wav)",
+     "sm;ssc;dwi;osu;osz;ogg;mp3;wav"},
+    {"Stepmania/ITG (*.sm)", "sm"},
+    {"Stepmania 5 (*.ssc)", "ssc"},
+    {"Dance With Intensity (*.dwi)", "dwi"},
+    {"Osu!mania (*.osu, *.osz)", "osu;osz"},
+    {"Ogg Vorbis (*.ogg)", "ogg"},
+    {"MP3 Audio (*.mp3)", "mp3"},
+    {"Waveform (*.wav)", "wav"},
+    {"All Files (*.*)", "*"},
+};
 
-static const char saveFilters[] =
-    "Stepmania/ITG (*.sm)\0*.sm\0"
-    "Stepmania 5 (*.ssc)\0*.ssc\0"
-    "Osu!mania (*.osu)\0*.osu\0"
-    "All Files (*.*)\0*.*\0";
+static const std::vector<FileFilter> saveFilters = {
+    {"Stepmania/ITG (*.sm)", "sm"},
+    {"Stepmania 5 (*.ssc)", "ssc"},
+    {"Osu!mania (*.osu)", "osu"},
+    {"All Files (*.*)", "*"},
+};
 
 static const int MAX_RECENT_FILES = 10;
 
@@ -444,9 +447,8 @@ struct EditorImpl : public Editor, public InputHandler {
     }
 
     bool openSimfile() override {
-        std::string filters(loadFilters, sizeof(loadFilters));
         fs::path path =
-            gSystem->openFileDlg("Open file", std::string(), filters);
+            gSystem->openFileDlg("Open file", std::string(), loadFilters);
         return openSimfile(path);
     }
 
@@ -556,9 +558,8 @@ struct EditorImpl : public Editor, public InputHandler {
             };
 
             // Show the save file dialog.
-            std::string filters(saveFilters, sizeof(saveFilters));
             fs::path path = gSystem->saveFileDlg("save file", save_path,
-                                                 filters, &filterIndex);
+                                                 saveFilters, &filterIndex);
             if (path.empty()) return false;
 
             auto ext = pathToUtf8(path.extension());

@@ -36,16 +36,18 @@ struct MenuBarImpl : public Menubar {
     typedef void (*UpdateFunction)();
     typedef System::MenuItem Item;
 
-    Item* myFileMenu;
-    Item* myVisualSyncMenu;
-    Item* myNotesSelectMenu;
-    Item* myViewMenu;
-    Item* myBeatlineMenu;
-    Item* myPreviewMenu;
-    Item* myMinimapMenu;
-    Item* myBgStyleMenu;
-    Item* myStatusMenu;
-    Item* myEditMenu;
+    Item* myFileMenu = nullptr;
+    Item* myVisualSyncMenu = nullptr;
+    Item* myNotesSelectMenu = nullptr;
+    Item* myViewMenu = nullptr;
+    Item* myBeatlineMenu = nullptr;
+    Item* myPreviewMenu = nullptr;
+    Item* myMinimapMenu = nullptr;
+    Item* myBgStyleMenu = nullptr;
+    Item* myStatusMenu = nullptr;
+    Item* myEditMenu = nullptr;
+
+    bool myIsInitialized = false;
 
     UpdateFunction myUpdateFunctions[NUM_PROPERTIES];
 
@@ -410,6 +412,7 @@ struct MenuBarImpl : public Menubar {
         sub(menu, myViewMenu, "View");
         sub(menu, hHelp, "Help");
 
+        myIsInitialized = true;
         update(ALL_PROPERTIES);
     }
 
@@ -630,6 +633,8 @@ struct MenuBarImpl : public Menubar {
     }
 
     void update(Property prop) override {
+        if (!myIsInitialized) return;
+
         if (prop == ALL_PROPERTIES) {
             for (int i = 1; i < NUM_PROPERTIES; ++i) {
                 myUpdateFunctions[i]();
