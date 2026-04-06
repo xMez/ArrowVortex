@@ -1,252 +1,100 @@
 #include <System/Mixer.h>
+#include <System/Debug.h>
 
-#include <malloc.h>
+#include <SDL3/SDL.h>
 
-#include "windows.h"
-#include "mmsystem.h"
+#include <cstring>
+#include <atomic>
 
 namespace Vortex {
-
-static const int WAVEOUT_CHANNELS = 2;
-static const int WAVEOUT_BLOCKS = 8;
-static const int WAVEOUT_BLOCK_FRAMES = 8192;
-static const int WAVEOUT_BLOCK_SIZE =
-    sizeof(short) * WAVEOUT_CHANNELS * WAVEOUT_BLOCK_FRAMES;
-
-static void CALLBACK MixerCallback(HWAVEOUT hwo, UINT msg, DWORD_PTR, DWORD_PTR,
-                                   DWORD_PTR);
-static DWORD WINAPI MixerThread(LPVOID param);
-
-struct ThreadEvent {
-    ThreadEvent() { handle = CreateEvent(nullptr, FALSE, FALSE, nullptr); }
-    ~ThreadEvent() { CloseHandle(handle); }
-    explicit operator HANDLE() { return handle; }
-    HANDLE handle;
-};
-
-// ================================================================================================
-// MixerImpl :: member data.
+static const int MIXER_CHANNELS = 2;
+static const int MIXER_BLOCK_FRAMES = 8192;
+static const int MIXER_BLOCK_SIZE =
+    sizeof(short) * MIXER_CHANNELS * MIXER_BLOCK_FRAMES;
 
 struct MixerImpl : public Mixer {
-    enum ThreadEvents {
-        WO_KILL_THREAD = WAIT_OBJECT_0 + 0,
-        WO_RESUME_THREAD = WAIT_OBJECT_0 + 1,
-        WO_PAUSE_THREAD = WAIT_OBJECT_0 + 2,
-        WO_WRITE_BLOCK = WAIT_OBJECT_0 + 3,
-    };
+    SDL_AudioStream* stream = nullptr;
+    MixSource* source = nullptr;
+    int sampleRate = 0;
+    std::atomic<bool> isPaused{true};
+    std::atomic<bool> isOpened{false};
+    short mixBuffer[MIXER_CHANNELS * MIXER_BLOCK_FRAMES];
 
-    int myFrequency = 0;
-    int myFreeBlockIndex = 0;
+    ~MixerImpl() override { close(); }
 
-    BYTE* myBlockMemory = nullptr;
-    WAVEHDR myHeaders[WAVEOUT_BLOCKS];
-    HWAVEOUT myWaveout = nullptr;
-    HANDLE myThread = nullptr;
+    static void SDLCALL audioCallback(void* userdata, SDL_AudioStream* astream,
+                                      int additional_amount, int total_amount) {
+        auto* mixer = static_cast<MixerImpl*>(userdata);
+        if (mixer->isPaused.load() || !mixer->source || additional_amount <= 0)
+            return;
 
-    ThreadEvent myKillThread;
-    ThreadEvent myPauseThread;
-    ThreadEvent myResumeThread;
-    ThreadEvent myThreadPaused;
-    ThreadEvent myWriteBlock;
-
-    volatile LONG myFreeBlocks = 0;
-
-    bool myIsOpened = false;
-    bool myIsPaused = true;
-
-    MixSource* mySource;
-
-    // ================================================================================================
-    // MixerImpl :: constructor and destructor.
-
-    ~MixerImpl() override {
-        close();
-
-        _aligned_free(myBlockMemory);
-    }
-
-    MixerImpl() {
-        memset(myHeaders, 0, sizeof(myHeaders));
-        mySource = nullptr;
-        myBlockMemory = static_cast<BYTE*>(
-            _aligned_malloc(WAVEOUT_BLOCK_SIZE * WAVEOUT_BLOCKS, 16));
-        for (WAVEHDR& header : myHeaders) {
-            memset(&header, 0, sizeof(WAVEHDR));
+        int framesNeeded = additional_amount / (sizeof(short) * MIXER_CHANNELS);
+        while (framesNeeded > 0) {
+            int framesToWrite = (framesNeeded < MIXER_BLOCK_FRAMES)
+                                    ? framesNeeded
+                                    : MIXER_BLOCK_FRAMES;
+            mixer->source->writeFrames(mixer->mixBuffer, framesToWrite);
+            SDL_PutAudioStreamData(
+                astream, mixer->mixBuffer,
+                framesToWrite * sizeof(short) * MIXER_CHANNELS);
+            framesNeeded -= framesToWrite;
         }
     }
 
-    void close() override {
-        if (myThread) {
-            SetEvent(static_cast<HANDLE>(myKillThread));
-            LONG err = WaitForSingleObject(myThread, INFINITE);
-            if (err) HudError("failed to close audio thread: %i", err);
-            CloseHandle(myThread);
-            myThread = nullptr;
-        }
-        if (myWaveout) {
-            LONG err = waveOutReset(myWaveout);
-            if (err) HudError("failed to reset wave out: %i\n", err);
+    bool open(MixSource* src, int samplerate) override {
+        if (isOpened.load()) close();
 
-            for (int i = 0; i < WAVEOUT_BLOCKS; ++i) {
-                WAVEHDR* header = myHeaders + i;
-                if (header->dwBufferLength > 0) {
-                    LONG err = waveOutUnprepareHeader(myWaveout, myHeaders + i,
-                                                      sizeof(WAVEHDR));
-                    if (err)
-                        HudError("failed to unprepare wave out header: %i",
-                                 err);
-                    memset(header, 0, sizeof(WAVEHDR));
-                }
-            }
+        source = src;
+        sampleRate = samplerate;
 
-            err = waveOutClose(myWaveout);
-            if (err) HudError("failed to close wave out: %i\n", err);
-            myWaveout = nullptr;
-        }
+        SDL_AudioSpec spec;
+        spec.freq = samplerate;
+        spec.format = SDL_AUDIO_S16;
+        spec.channels = MIXER_CHANNELS;
 
-        myFreeBlockIndex = 0;
-        myFreeBlocks = 0;
-        myIsOpened = false;
-        myIsPaused = true;
-    }
-
-    bool open(MixSource* source, int samplerate) override {
-        if (myIsOpened) close();
-
-        // Try to open the waveout device.
-        WAVEFORMATEX wfex;
-        wfex.wFormatTag = WAVE_FORMAT_PCM;
-        wfex.nChannels = WAVEOUT_CHANNELS;
-        wfex.nSamplesPerSec = samplerate;
-        wfex.nBlockAlign = sizeof(short) * WAVEOUT_CHANNELS;
-        wfex.nAvgBytesPerSec = sizeof(short) * WAVEOUT_CHANNELS * samplerate;
-        wfex.wBitsPerSample = sizeof(short) * 8;
-        wfex.cbSize = 0;
-
-        MMRESULT res =
-            waveOutOpen(&myWaveout, WAVE_MAPPER, &wfex,
-                        reinterpret_cast<DWORD_PTR>(&MixerCallback),
-                        reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
-
-        if (res != MMSYSERR_NOERROR) {
-            HudError("failed to open wave out: %i", res);
-            close();
+        stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                           &spec, audioCallback, this);
+        if (!stream) {
+            HudError("Failed to open SDL3 audio: %s", SDL_GetError());
             return false;
         }
 
-        // Create the output buffer blocks.
-        int index = 0;
-        for (WAVEHDR& header : myHeaders) {
-            memset(&header, 0, sizeof(WAVEHDR));
-            header.lpData = reinterpret_cast<LPSTR>(
-                myBlockMemory +
-                static_cast<size_t>(WAVEOUT_BLOCK_SIZE) * index);
-            header.dwBufferLength = WAVEOUT_BLOCK_SIZE;
-            header.dwUser = index;
-
-            MMRESULT res =
-                waveOutPrepareHeader(myWaveout, &header, sizeof(WAVEHDR));
-            if (res != MMSYSERR_NOERROR) {
-                HudError("Could not prepare waveout header: %i", res);
-                close();
-                return false;
-            }
-            ++index;
-        }
-
-        myFrequency = samplerate;
-        mySource = source;
-        myIsOpened = true;
-
-        // Start the MixerDevice update thread.
-        myThread = CreateThread(
-            nullptr, 0, static_cast<LPTHREAD_START_ROUTINE>(MixerThread), this,
-            0, nullptr);
-
+        isOpened.store(true);
+        isPaused.store(true);
         return true;
     }
 
+    void close() override {
+        if (stream) {
+            SDL_DestroyAudioStream(stream);
+            stream = nullptr;
+        }
+        source = nullptr;
+        isOpened.store(false);
+        isPaused.store(true);
+    }
+
     void pause() override {
-        if (myIsOpened && !myIsPaused) {
-            SetEvent(static_cast<HANDLE>(myPauseThread));
-            WaitForSingleObject(static_cast<HANDLE>(myThreadPaused), INFINITE);
-            waveOutReset(myWaveout);
-            myIsPaused = true;
+        if (isOpened.load() && !isPaused.load()) {
+            isPaused.store(true);
+            if (stream) {
+                SDL_PauseAudioStreamDevice(stream);
+            }
         }
     }
 
     void resume() override {
-        if (myIsOpened && myIsPaused) {
-            myFreeBlockIndex = 0;
-            myFreeBlocks = WAVEOUT_BLOCKS;
-            SetEvent(static_cast<HANDLE>(myResumeThread));
-            waveOutRestart(myWaveout);
-            SetEvent(static_cast<HANDLE>(myWriteBlock));
-            myIsPaused = false;
-        }
-    }
-
-    void blockDone() {
-        InterlockedIncrement(&myFreeBlocks);
-        SetEvent(static_cast<HANDLE>(myWriteBlock));
-    }
-
-    void mixThread() {
-        const HANDLE events[] = {static_cast<HANDLE>(myKillThread),
-                                 static_cast<HANDLE>(myResumeThread),
-                                 static_cast<HANDLE>(myPauseThread),
-                                 static_cast<HANDLE>(myWriteBlock)};
-        while (true) {
-            // Wait for a thread event.
-            DWORD id = WaitForMultipleObjects(4, events, FALSE, INFINITE);
-            if (id == WO_KILL_THREAD) {
-                return;
-            } else if (id == WO_PAUSE_THREAD) {
-                SetEvent(static_cast<HANDLE>(myThreadPaused));
-                id = WaitForMultipleObjects(2, events, FALSE, INFINITE);
-                if (id == WO_KILL_THREAD) return;
-            } else if (id == WO_WRITE_BLOCK) {
-                while (myFreeBlocks > 0) {
-                    LONG result = InterlockedDecrement(&myFreeBlocks);
-                    if (result < 0) break;
-
-                    // Get the next free buffer block.
-                    BYTE* samples =
-                        myBlockMemory + myFreeBlockIndex * WAVEOUT_BLOCK_SIZE;
-                    WAVEHDR* header = myHeaders + myFreeBlockIndex;
-                    myFreeBlockIndex = (myFreeBlockIndex + 1) % WAVEOUT_BLOCKS;
-
-                    // Send the filled block to wave out.
-                    mySource->writeFrames(reinterpret_cast<short*>(samples),
-                                          WAVEOUT_BLOCK_FRAMES);
-                    waveOutWrite(myWaveout, header, sizeof(WAVEHDR));
-                }
+        if (isOpened.load() && isPaused.load()) {
+            isPaused.store(false);
+            if (stream) {
+                SDL_ResumeAudioStreamDevice(stream);
             }
         }
     }
-
-};  // MixerImpl
-
-// ================================================================================================
-// Mixing callback functions.
-
-static void CALLBACK MixerCallback(HWAVEOUT hwo, UINT msg, DWORD_PTR mixer,
-                                   DWORD_PTR, DWORD_PTR) {
-    if (msg == WOM_DONE) {
-        reinterpret_cast<MixerImpl*>(mixer)->blockDone();
-    }
-}
-
-static DWORD WINAPI MixerThread(LPVOID mixer) {
-    (static_cast<MixerImpl*>(mixer))->mixThread();
-    return 0;
-}
-
-// ================================================================================================
-// Mixer API.
+};
 
 Mixer* Mixer::create() { return new MixerImpl; }
 
 Mixer::~Mixer() = default;
 
-};  // namespace Vortex
+}  // namespace Vortex
