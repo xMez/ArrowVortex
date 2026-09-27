@@ -51,7 +51,6 @@ Vortex::InputEvents myEvents;
 Vortex::vec2i myMousePos = {0, 0};
 Vortex::vec2i mySize = {0, 0};
 SDL_Window* window = nullptr;
-SDL_Renderer* renderer = nullptr;
 Vortex::Cursor::Icon myCursor = Vortex::Cursor::ARROW;
 std::map<Vortex::Cursor::Icon, SDL_SystemCursor> myCursorMap;
 std::map<Vortex::Cursor::Icon, SDL_Cursor*> myCursorCache;
@@ -265,14 +264,13 @@ struct SystemImpl : public System {
         myCursorMap.insert({Cursor::SIZE_NESW, SDL_SYSTEM_CURSOR_NESW_RESIZE});
         myCursorMap.insert({Cursor::SIZE_NWSE, SDL_SYSTEM_CURSOR_NWSE_RESIZE});
 
-        // Create a window handle.
-        if (!SDL_CreateWindowAndRenderer("ArrowVortex", 800, 600,
-                                         SDL_WINDOW_OPENGL |
-                                             SDL_WINDOW_HIGH_PIXEL_DENSITY |
-                                             SDL_WINDOW_RESIZABLE,
-                                         &window, &renderer)) {
-            SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
-        }
+        // Create an OpenGL window. SDL_CreateWindowAndRenderer creates a
+        // renderer-owned window, which is not suitable for this app's direct
+        // OpenGL context.
+        window = SDL_CreateWindow("ArrowVortex", 800, 600,
+                                  SDL_WINDOW_OPENGL |
+                                      SDL_WINDOW_HIGH_PIXEL_DENSITY |
+                                      SDL_WINDOW_RESIZABLE);
 
         if (LogCheckpoint(window != nullptr, "creating window")) return;
 
@@ -599,6 +597,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     Debug::openConsole();
 #endif
     gSystem = new SystemImpl;
+    if (!myInitSuccesful) return SDL_APP_FAILURE;
+
     Editor::create();
     SDL_StartTextInput(window);
     SDL_SetWindowResizable(window, true);
@@ -737,12 +737,22 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 // Convert SDL window mouse coordinates to the app's OpenGL coordinate space.
 static vec2i windowMouseToApp(float wx, float wy) {
     int menu_h = gMenubar ? gMenubar->getMenubarHeight() : 0;
-    float rx = wx;
-    float ry = wy;
-    if (!SDL_RenderCoordinatesFromWindow(renderer, wx, wy, &rx, &ry))
-        HudError("Failed to get render coordinates with error: %s",
+    int window_width = 0;
+    int window_height = 0;
+    int pixel_width = 0;
+    int pixel_height = 0;
+    if (!SDL_GetWindowSize(window, &window_width, &window_height) ||
+        !SDL_GetWindowSizeInPixels(window, &pixel_width, &pixel_height) ||
+        window_width <= 0 || window_height <= 0) {
+        HudError("Failed to get SDL window size with error: %s",
                  SDL_GetError());
-    return {static_cast<int>(rx), static_cast<int>(ry - menu_h)};
+        return {static_cast<int>(wx), static_cast<int>(wy - menu_h)};
+    }
+
+    const float scale_x = static_cast<float>(pixel_width) / window_width;
+    const float scale_y = static_cast<float>(pixel_height) / window_height;
+    return {static_cast<int>(wx * scale_x),
+            static_cast<int>(wy * scale_y - menu_h)};
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
@@ -882,7 +892,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 }
 
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
-    SDL_StopTextInput(window);
+    if (myInitSuccesful && window) SDL_StopTextInput(window);
     delete static_cast<SystemImpl*>(gSystem);
     ApplicationEnd();
 
