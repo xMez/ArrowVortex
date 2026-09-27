@@ -65,4 +65,5 @@ echo "Building ArrowVortex..."
 cmake --build build --parallel
 
 echo "Build complete!"
-echo "The ArrowVortex executable should be in the build directory."
+echo "The application bundle is at: build/bin/ArrowVortex.app"
+echo "Install it with: cmake --install build --prefix \"\$HOME/Applications\""

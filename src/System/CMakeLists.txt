@@ -49,14 +49,38 @@ else()
 	add_executable(ArrowVortex System.cpp)
 endif()
 
+if(APPLE)
+	set(MACOS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/ArrowVortex.icns")
+	set_source_files_properties("${MACOS_ICON}" PROPERTIES
+		MACOSX_PACKAGE_LOCATION "Resources"
+	)
+	target_sources(ArrowVortex PRIVATE "${MACOS_ICON}")
+	set_target_properties(ArrowVortex PROPERTIES
+		MACOSX_BUNDLE TRUE
+		MACOSX_BUNDLE_BUNDLE_NAME "ArrowVortex"
+		MACOSX_BUNDLE_GUI_IDENTIFIER "com.arrowvortex.ArrowVortex"
+		MACOSX_BUNDLE_BUNDLE_VERSION "1"
+		MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
+		MACOSX_BUNDLE_ICON_FILE "ArrowVortex.icns"
+	)
+endif()
+
 if(FFMPEG_FOUND)
 	target_link_directories(ArrowVortex PRIVATE ${FFMPEG_LIBRARY_DIRS})
 endif()
 
-add_custom_command(
-	TARGET ArrowVortex POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		${PROJECT_SOURCE_DIR}/bin
-		$<TARGET_FILE_DIR:ArrowVortex>)
+if(APPLE)
+	add_custom_command(
+		TARGET ArrowVortex POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+			${PROJECT_SOURCE_DIR}/bin
+			$<TARGET_BUNDLE_CONTENT_DIR:ArrowVortex>/Resources)
+else()
+	add_custom_command(
+		TARGET ArrowVortex POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+			${PROJECT_SOURCE_DIR}/bin
+			$<TARGET_FILE_DIR:ArrowVortex>)
+endif()
 
 target_link_libraries(ArrowVortex PRIVATE System)

@@ -1,10 +1,20 @@
 #import <AppKit/AppKit.h>
+#include <unistd.h>
 
-// Called from System.cpp to ensure the app is recognized as a foreground
-// GUI application. Required for unbundled executables on macOS (no .app bundle
-// / no Info.plist).
+// Called from System.cpp to activate the application and prepare bundle
+// resources when launched from Finder.
 extern "C" void ActivateMacOSApp() {
     @autoreleasepool {
+        NSBundle* bundle = [NSBundle mainBundle];
+        NSString* bundlePath = [bundle bundlePath];
+        if (bundlePath &&
+            [[bundlePath pathExtension] caseInsensitiveCompare:@"app"] ==
+                NSOrderedSame) {
+            const char* resourcePath =
+                [[bundle resourcePath] fileSystemRepresentation];
+            if (resourcePath) chdir(resourcePath);
+        }
+
         if (!NSApp) {
             [NSApplication sharedApplication];
         }

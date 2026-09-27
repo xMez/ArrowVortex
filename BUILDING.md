@@ -1,5 +1,27 @@
 # Building
 
+## macOS
+
+Prerequisites:
+* Xcode Command Line Tools
+* CMake 3.28 or newer
+* vcpkg, bootstrapped, with `VCPKG_ROOT` set to its installation directory
+
+From the project root, build the `.app` bundle (the script selects the Apple
+Silicon or Intel vcpkg triplet automatically):
+
+```sh
+./build.sh
+```
+
+The build creates `build/bin/ArrowVortex.app`. To install it in your user
+Applications folder and launch it:
+
+```sh
+cmake --install build --prefix "$HOME/Applications"
+open "$HOME/Applications/ArrowVortex.app"
+```
+
 ## Windows
 
 Prerequsites:
