@@ -16,6 +16,7 @@ struct Menubar : public InputHandler {
 
         OPEN_FILE,
         RECENT_FILES,
+        AUDIO_OFFSET,
 
         SHOW_WAVEFORM,
         SHOW_NOTES,

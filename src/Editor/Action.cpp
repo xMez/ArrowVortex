@@ -139,6 +139,15 @@ bool Action::perform(Type action) {
             gEditor->openDialog(DIALOG_PREVIEW_SETTINGS);
             break;
         }
+        case OPEN_DIALOG_AUDIO_SETTINGS: {
+            gEditor->openDialog(DIALOG_AUDIO_SETTINGS);
+            break;
+        }
+        case TOGGLE_AUDIO_OFFSET: {
+            gMusic->toggleAudioOffsetEnabled();
+            gMenubar->update(Menubar::AUDIO_OFFSET);
+            break;
+        }
 
         case EDIT_UNDO: {
             gSystem->getEvents().addKeyPress(Key::Z, Keyflag::CTRL, false);

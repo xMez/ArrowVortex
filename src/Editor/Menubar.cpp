@@ -22,6 +22,7 @@
 #include <Editor/Waveform.h>
 #include <Editor/Editing.h>
 #include <Editor/Minimap.h>
+#include <Editor/Music.h>
 #include <Editor/TempoBoxes.h>
 
 #include <System/System.h>
@@ -48,6 +49,7 @@ struct MenuBarImpl : public Menubar {
 #endif
 
     Item* myTopMenu;
+    Item* myAudioMenu;
     Item* myFileMenu;
     Item* myEditMenu;
     Item* myVisualSyncMenu;
@@ -304,9 +306,12 @@ struct MenuBarImpl : public Menubar {
         add(hAudioSpeed, SPEED_DECREASE_FINE, "Slower by 1%");
 
         // Audio menu.
-        Item* hAudio = newMenu();
+        Item* hAudio = myAudioMenu = newMenu();
         sub(hAudio, hAudioVol, "Volume");
         sub(hAudio, hAudioSpeed, "Speed");
+        sep(hAudio);
+        add(hAudio, TOGGLE_AUDIO_OFFSET, "Enable audio offset");
+        add(hAudio, OPEN_DIALOG_AUDIO_SETTINGS, "Configure audio offset...");
         sep(hAudio);
         add(hAudio, TOGGLE_BEAT_TICK, "Beat tick");
         add(hAudio, TOGGLE_NOTE_TICK, "Note tick");
@@ -474,6 +479,10 @@ struct MenuBarImpl : public Menubar {
             }
             MENU->myFileMenu->replaceSubmenu(1, recent, "Recent files",
                                              (numFiles == 0));
+        };
+        myUpdateFunctions[AUDIO_OFFSET] = [] {
+            MENU->myAudioMenu->setChecked(TOGGLE_AUDIO_OFFSET,
+                                           gMusic->isAudioOffsetEnabled());
         };
         myUpdateFunctions[SHOW_WAVEFORM] = [] {
             MENU->myViewMenu->setChecked(TOGGLE_SHOW_WAVEFORM,

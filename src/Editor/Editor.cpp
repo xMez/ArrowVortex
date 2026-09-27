@@ -54,6 +54,7 @@
 #include <Dialogs/Zoom.h>
 #include <Dialogs/CustomSnap.h>
 #include <Dialogs/PreviewSettings.h>
+#include <Dialogs/AudioSettings.h>
 #include <Dialogs/EditSegment.h>
 
 #include <algorithm>
@@ -847,6 +848,9 @@ struct EditorImpl : public Editor, public InputHandler {
                 break;
             case DIALOG_EDIT_SEGMENT:
                 dlg = new DialogEditSegment;
+                break;
+            case DIALOG_AUDIO_SETTINGS:
+                dlg = new DialogAudioSettings;
                 break;
         };
 

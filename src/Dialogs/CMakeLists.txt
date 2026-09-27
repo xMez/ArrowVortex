@@ -1,4 +1,5 @@
 list(APPEND INC
+	"AudioSettings.h"
 	"AdjustSync.h"
 	"AdjustTempo.h"
 	"AdjustTempoSM5.h"
@@ -19,6 +20,7 @@ list(APPEND INC
 )
 
 list(APPEND SRC
+	"AudioSettings.cpp"
 	"AdjustSync.cpp"
 	"AdjustTempo.cpp"
 	"AdjustTempoSM5.cpp"

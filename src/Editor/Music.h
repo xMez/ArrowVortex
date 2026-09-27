@@ -38,6 +38,19 @@ struct Music {
     /// Returns the volume level of the audio mixer [0-100%].
     virtual int getVolume() = 0;
 
+    /// Sets the playback audio offset in milliseconds. Positive values delay
+    /// the audio relative to the editor timeline; negative values advance it.
+    virtual void setAudioOffsetMs(int milliseconds) = 0;
+
+    /// Returns the playback audio offset in milliseconds.
+    virtual int getAudioOffsetMs() = 0;
+
+    /// Toggles whether the configured playback audio offset is applied.
+    virtual void toggleAudioOffsetEnabled() = 0;
+
+    /// Returns true if the playback audio offset is enabled.
+    virtual bool isAudioOffsetEnabled() = 0;
+
     /// Mutes or unmutes the audio mixer.
     virtual void setMuted(bool mute) = 0;
 

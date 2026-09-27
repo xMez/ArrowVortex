@@ -71,6 +71,8 @@ struct MusicImpl : public Music, public MixSource {
     std::string myTitle, myArtist;
     int myMusicSpeed;
     int myMusicVolume;
+    int myAudioOffsetMs;
+    bool myAudioOffsetEnabled;
     int myTickOffsetMs;
     double myPlayPosition;
     double myPlayStartTime;
@@ -95,6 +97,8 @@ struct MusicImpl : public Music, public MixSource {
 
         myMusicSpeed = 100;
         myMusicVolume = 100;
+        myAudioOffsetMs = 0;
+        myAudioOffsetEnabled = false;
         myTickOffsetMs = 0;
         myPlayPosition = 0.0;
         myPlayStartTime = 0.0;
@@ -130,14 +134,19 @@ struct MusicImpl : public Music, public MixSource {
         XmrNode* audio = settings.child("audio");
         if (audio) {
             audio->get("musicVolume", &myMusicVolume);
+            audio->get("audioOffsetMs", &myAudioOffsetMs);
+            audio->get("audioOffsetEnabled", &myAudioOffsetEnabled);
             audio->get("tickOffsetMs", &myTickOffsetMs);
         }
+        myAudioOffsetMs = std::clamp(myAudioOffsetMs, -1000, 1000);
     }
 
     void saveSettings(XmrNode& settings) override {
         XmrNode* audio = settings.addChild("audio");
 
         audio->addAttrib("musicVolume", static_cast<long>(myMusicVolume));
+        audio->addAttrib("audioOffsetMs", static_cast<long>(myAudioOffsetMs));
+        audio->addAttrib("audioOffsetEnabled", myAudioOffsetEnabled);
         audio->addAttrib("tickOffsetMs", static_cast<long>(myTickOffsetMs));
     }
 
@@ -232,8 +241,8 @@ struct MusicImpl : public Music, public MixSource {
         }
     }
 
-    void WriteTicks(short* buf, int frames, const TickData& tick, int rate) {
-        int playPos = static_cast<int>(myPlayPosition);
+    void WriteTicks(short* buf, int frames, const TickData& tick, int rate,
+                    int64_t playPos) {
         int count = tick.frames.size();
         const int* ticks = tick.frames.data();
 
@@ -262,6 +271,7 @@ struct MusicImpl : public Music, public MixSource {
     }
 
     void WriteSourceFrames(short* buffer, int frames, int64_t srcPos) {
+        const int64_t timelinePos = srcPos;
         short* dst = buffer;
         int musicVolume = gMusic->getVolume();
 
@@ -308,15 +318,22 @@ struct MusicImpl : public Music, public MixSource {
 
         // Write beat and step ticks.
         int rate = gMusic->getSpeed();
-        if (myBeatTick.enabled) WriteTicks(buffer, frames, myBeatTick, rate);
-        if (myNoteTick.enabled) WriteTicks(buffer, frames, myNoteTick, rate);
+        if (myBeatTick.enabled)
+            WriteTicks(buffer, frames, myBeatTick, rate, timelinePos);
+        if (myNoteTick.enabled)
+            WriteTicks(buffer, frames, myNoteTick, rate, timelinePos);
     }
 
     void writeFrames(short* buffer, int frames) override {
+        const double offsetFrames = myAudioOffsetEnabled
+                                        ? -static_cast<double>(myAudioOffsetMs) *
+                                              mySamples.getFrequency() *
+                                              myMusicSpeed / 100000.0
+                                        : 0.0;
         double srcAdvance = static_cast<double>(frames);
         if (myMusicSpeed == 100) {
             // Source and target samplerate are equal.
-            int64_t srcPos = llround(myPlayPosition);
+            int64_t srcPos = llround(myPlayPosition + offsetFrames);
             WriteSourceFrames(buffer, frames, srcPos);
         } else {
             double rate = static_cast<double>(myMusicSpeed) / 100.0;
@@ -324,7 +341,8 @@ struct MusicImpl : public Music, public MixSource {
 
             // Source and target samplerate are different, mix to temporary
             // buffer.
-            int64_t srcPos = static_cast<int64_t>(myPlayPosition);
+            int64_t srcPos =
+                static_cast<int64_t>(myPlayPosition + offsetFrames);
             int tmpFrames = frames * myMusicSpeed / 100;
             myMixBuffer.resize(tmpFrames * 2);
             WriteSourceFrames(myMixBuffer.data(), tmpFrames, srcPos);
@@ -638,6 +656,27 @@ struct MusicImpl : public Music, public MixSource {
     }
 
     int getVolume() override { return myMusicVolume; }
+
+    void setAudioOffsetMs(int milliseconds) override {
+        milliseconds = std::clamp(milliseconds, -1000, 1000);
+        if (myAudioOffsetMs != milliseconds) {
+            interruptStream();
+            myAudioOffsetMs = milliseconds;
+            resumeStream();
+        }
+    }
+
+    int getAudioOffsetMs() override { return myAudioOffsetMs; }
+
+    void toggleAudioOffsetEnabled() override {
+        interruptStream();
+        myAudioOffsetEnabled = !myAudioOffsetEnabled;
+        resumeStream();
+        HudNote("Audio offset: %s",
+                myAudioOffsetEnabled ? "enabled" : "disabled");
+    }
+
+    bool isAudioOffsetEnabled() override { return myAudioOffsetEnabled; }
 
     void setMuted(bool mute) override {
         if (myIsMuted != mute) {
